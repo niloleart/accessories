@@ -144,7 +144,6 @@ def generateER(root, cla, imgName):
         return 0
     # load original image
     img = cv2.imread(root + '/' + cla + '/' + imgName)
-
     #img = cv2.resize(img, (img_size, img_size))
     imgOrig = copy.deepcopy(img)
 
@@ -158,42 +157,57 @@ def generateER(root, cla, imgName):
     print choice
     er = cv2.imread(ER_SOURCE + '/' + choice, -1)
 
-    # randomly resize the earring
-    mmsize = img.shape[0] if img.shape[0] < img.shape[1] else img.shape[1]
-    newSize = random.randint(round(0.2 * mmsize), round(0.4 * mmsize))
+    # Headphones
+    if choice.startswith('2'):
+        print 'headphones'
+        x = img.shape[0]/2
+        y = img.shape[1]/2
+        er_x = er.shape[0]/2
+        er_y = er.shape[1]/2
 
-    er = cv2.resize(er, (newSize, newSize))
 
-    # randomly change color of the earring
-    colorShift = 100;
-    er = np.int16(er)
 
-    er[:,:,0] += random.randint(-colorShift, colorShift)
-    er[:,:,1] += random.randint(-colorShift, colorShift)
-    er[:,:,2] += random.randint(-colorShift, colorShift)
+    # Hair
+    elif choice.startswith('3'):
+        print 'hair'
 
-    er[er > 255] = 255
-    er[er < 0] = 0
-    er = np.uint8(er)
+    # Earring
+    else:
+        # randomly resize the earring
+        mmsize = img.shape[0] if img.shape[0] < img.shape[1] else img.shape[1]
+        newSize = random.randint(round(0.2 * mmsize), round(0.4 * mmsize))
 
-    # randomly move the earring
-    xLeft = 0
-    xRight = img.shape[0] - er.shape[0]
-    yTop = round(img.shape[1]/2)
-    yBottom = img.shape[1] - er.shape[1]
-    #print(xLeft, xRight, yTop, yBottom)
-    x_offset = random.randint(xLeft, xRight)
-    y_offset = random.randint(yTop, yBottom)
-    # paste earring to the orig image
-    for c in range(0,3):
-        img[x_offset:x_offset+er.shape[0], y_offset:y_offset+er.shape[1], c] = er[:,:,c] * (er[:,:,3]/255.0) +  img[x_offset:x_offset+er.shape[0], y_offset:y_offset+er.shape[1], c] * (1.0 - er[:,:,3]/255.0)
+        er = cv2.resize(er, (newSize, newSize))
 
-    #generate mask
-    blank = np.zeros((img.shape[0], img.shape[1]))
-    erFlat = np.zeros((er.shape[0], er.shape[1]))
-    erFlat[er[:,:,3] > 0] = 255
-    blank[x_offset:x_offset+erFlat.shape[0], y_offset:y_offset+erFlat.shape[1]] = erFlat[:,:] * (erFlat[:,:]/255.0) +  blank[x_offset:x_offset+erFlat.shape[0], y_offset:y_offset+erFlat.shape[1]] * (1.0 - erFlat[:,:]/255.0)
-    mask = 255 - blank
+        # randomly change color of the earring
+        colorShift = 100;
+        er = np.int16(er)
+
+        er[:,:,0] += random.randint(-colorShift, colorShift)
+        er[:,:,1] += random.randint(-colorShift, colorShift)
+        er[:,:,2] += random.randint(-colorShift, colorShift)
+
+        er[er > 255] = 255
+        er[er < 0] = 0
+        er = np.uint8(er)
+
+        # randomly move the earring
+        xLeft = 0
+        xRight = img.shape[0] - er.shape[0]
+        yTop = round(img.shape[1]/2)
+        yBottom = img.shape[1] - er.shape[1]
+        x_offset = random.randint(xLeft, xRight)
+        y_offset = random.randint(yTop, yBottom)
+        # paste earring to the orig image
+        for c in range(0,3):
+            img[x_offset:x_offset+er.shape[0], y_offset:y_offset+er.shape[1], c] = er[:,:,c] * (er[:,:,3]/255.0) +  img[x_offset:x_offset+er.shape[0], y_offset:y_offset+er.shape[1], c] * (1.0 - er[:,:,3]/255.0)
+
+        #generate mask
+        blank = np.zeros((img.shape[0], img.shape[1]))
+        erFlat = np.zeros((er.shape[0], er.shape[1]))
+        erFlat[er[:,:,3] > 0] = 255
+        blank[x_offset:x_offset+erFlat.shape[0], y_offset:y_offset+erFlat.shape[1]] = erFlat[:,:] * (erFlat[:,:]/255.0) +  blank[x_offset:x_offset+erFlat.shape[0], y_offset:y_offset+erFlat.shape[1]] * (1.0 - erFlat[:,:]/255.0)
+        mask = 255 - blank
 
     # if there is existing Mask add it to the currently generated mask
     if os.path.isfile(MASK_SOURCE + '/' + cla + '/' + imgName):
@@ -224,7 +238,7 @@ def segmentER(root, cla, imgName):
         mask = np.ones((img.shape[0], img.shape[1])) * 255
         print(mask.shape)
 
-    writeResults(os.path.basename(ROOT_DIR), cla, imgName, img, mask, True, img)
+    writeResults(os.path.basename(ROOT_DIR), cla, imgName, img, mask, False, img)
 
 
 def writeResults(rootName, cla, imgName, img, mask, isDetected, original):
