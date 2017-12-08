@@ -21,7 +21,7 @@ GENERATE_OR_SEGMENT = 0
 #ROOT_DIR = '../data/UERCTest'
 ROOT_DIR = '../data/RESULTS/UERC_org'
 RESULTS_DIR = '../data/RESULTS/HAIR'
-ER_SOURCE = '../data/data/earrings'
+ER_SOURCE = '../data/data/hair'
 MASK_SOURCE = '../data/uerc/Results/Truth' # only used for UERCTest generation
 img_size = 227
 
@@ -157,19 +157,61 @@ def generateER(root, cla, imgName):
     print choice
     er = cv2.imread(ER_SOURCE + '/' + choice, -1)
 
+
     # Headphones
     if choice.startswith('2'):
-        print 'headphones'
-        x = img.shape[0]/2
-        y = img.shape[1]/2
-        er_x = er.shape[0]/2
-        er_y = er.shape[1]/2
 
+        mmsize = img.shape[0] if img.shape[0] < img.shape[1] else img.shape[1]
+        newSize = random.randint(round(0.2 * mmsize), round(0.4 * mmsize))
+        if not newSize%2 == 0:
+            newSize = newSize + 1
+
+        er = cv2.resize(er, (newSize, newSize))
+
+        print 'headphones'
+        x = (img.shape[0]/2)
+        print 'x: ',x
+        y = (img.shape[1]/2)
+        print 'y: ',y
+        er_x = (er.shape[0]/2)
+        print 'er_x: ',er_x
+        er_y = (er.shape[1]/2)
+        print 'er_y: ',er_y
+        for c in range(0,3):
+           img[x-er_x:x+er_x, y-er_y:y+er_y, c] = img[x-er_x:x+er_x, y-er_y:y+er_y, c] * (1.0 - er[:,:,3]/255.0) + er[:,:,c] * (er[:,:,3]/255.0)
+
+        # generate mask
+        blank = np.zeros((img.shape[0], img.shape[1]))
+        erFlat = np.zeros((er.shape[0], er.shape[1]))
+        erFlat[er[:, :, 3] > 0] = 255
+        #TODO mirar pq no la posa a lloc
+        blank[x:x + erFlat.shape[0], y:y + erFlat.shape[1]] = erFlat[:, :] * (erFlat[:, :] / 255.0) + blank[x:x + erFlat.shape[0],
+                                            y:y + erFlat.shape[1]] * (1.0 - erFlat[:, :] / 255.0)
+        mask = 255 - blank
 
 
     # Hair
     elif choice.startswith('3'):
         print 'hair'
+        x = img.shape[1]
+        y = img.shape[0]
+        print 'Img X: ',x,'  Img Y: ',y
+        y_move = int(round(2*y/5))
+        print 'y_move: ',y_move
+        er = cv2.resize(er,(y_move,x))
+        cv2.imshow('er',er)
+        print 'hair new X: ',er.shape[1], '   hair new Y: ',er.shape[0]
+        print 'img X: ',img.shape[1], '   img Y: ', img.shape[0]
+
+        for c in range(0,3):
+            img[0:x, 0:y_move, c] = img[0:x, 0:y_move, c] * (1.0 - er[:,:,3]/255.0) + er[:,:,c] * (er[:,:,3]/255.0)
+
+        # generate mask
+        blank = np.zeros((img.shape[0], img.shape[1]))
+        erFlat = np.zeros((er.shape[0], er.shape[1]))
+        erFlat[er[:, :, 3] > 0] = 255
+        blank[0:erFlat.shape[0], 0:erFlat.shape[1]] = erFlat[:, :] * (erFlat[:, :] / 255.0) + blank[0: + erFlat.shape[0], 0: + erFlat.shape[1]] * (1.0 - erFlat[:, :] / 255.0)
+        mask = 255 - blank
 
     # Earring
     else:
@@ -200,7 +242,7 @@ def generateER(root, cla, imgName):
         y_offset = random.randint(yTop, yBottom)
         # paste earring to the orig image
         for c in range(0,3):
-            img[x_offset:x_offset+er.shape[0], y_offset:y_offset+er.shape[1], c] = er[:,:,c] * (er[:,:,3]/255.0) +  img[x_offset:x_offset+er.shape[0], y_offset:y_offset+er.shape[1], c] * (1.0 - er[:,:,3]/255.0)
+            img[x_offset:x_offset+er.shape[0], y_offset:y_offset+er.shape[1], c] = er[:,:,c] * (er[:,:,3]/255.0) + img[x_offset:x_offset+er.shape[0], y_offset:y_offset+er.shape[1], c] * (1.0 - er[:,:,3]/255.0)
 
         #generate mask
         blank = np.zeros((img.shape[0], img.shape[1]))
@@ -217,7 +259,7 @@ def generateER(root, cla, imgName):
         mask[eMask == 0] = 0
 
     #print(os.path.basename(ROOT_DIR))
-    writeResults(os.path.basename(ROOT_DIR), cla, imgName, img, mask, True, imgOrig)
+    writeResults(os.path.basename(ROOT_DIR), cla, imgName, img, mask, False, imgOrig)
 
 
 def segmentER(root, cla, imgName):	
